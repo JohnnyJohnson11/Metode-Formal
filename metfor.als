@@ -1,109 +1,126 @@
-open util/boolean
+open util/ boolean
+module CinemaBookingSystem
 
-sig String {}
-
+// Signatures
 abstract sig User {
-    username: String,
-    password: String,
-    ticket: lone Ticket
+    username: lone Username,
+    password: lone Password
 }
+
+sig Username {}
+sig Password {}
+sig DateTime {}
+
+abstract sig Film {
+    title: lone Title,
+    duration: lone Int,
+    genre: lone Genre
+}
+
+sig Title {}
+sig Genre {}
+
+abstract sig Location {
+    name: lone Name,
+    address: lone Address
+}
+
+sig Name {}
+sig Address {}
+
+abstract sig Showtime {
+    time: lone DateTime
+}
+
+abstract sig Seat {
+    seatNumber: lone SeatNumber,
+    isOccupied: lone Int
+}
+
+sig SeatNumber {}
 
 sig Login {
-    username: String,
-    password: String
+    username: one Username,
+    password: one Password
 }
 
-abstract sig Pilih {
-    chosen: lone User,
-    available: lone Location
+sig PilihFilm {
+    availableFilms: set Film
 }
 
-sig PilihFilm extends Pilih {
-    availableFilm: lone Film
+sig PilihLokasi {
+    availableLocations: set Location
 }
 
-sig PilihLokasi extends Pilih {
-    availableLocations: lone Location
+sig PilihJamTayang {
+    availableShowtimes: set Showtime
 }
 
-sig PilihJamTayang extends Pilih {
-    availableShowtimes: lone Showtime
-}
-
-sig PilihKursi extends Pilih {
-    availableSeats: lone Seat
+sig PilihKursi {
+    availableSeats: set Seat
 }
 
 sig ProsesPembayaran {
-    paymentDetails: String
+    paymentDetails: lone String
 }
 
-sig Film {
-    title: String,
-    duration: Int,
-    genre: String
+// Facts
+fact UserUnique {
+    all u1, u2: User | u1 != u2 implies u1.username != u2.username
 }
 
-sig Location {
-    name: String,
-    address: String
+fact FilmUnique {
+    all f1, f2: Film | f1 != f2 implies f1.title != f2.title
 }
 
-sig Showtime {
-    time: Int
+fact LocationUnique {
+    all l1, l2: Location | l1 != l2 implies l1.name != l2.name
 }
 
-sig Seat {
-    seatNumber: String,
-    isOccupied: Bool
+fact ShowtimeUnique {
+    all st1, st2: Showtime | st1 != st2 implies st1.time != st2.time
 }
 
-sig Ticket {}
-
-fact UserLogin {
-    all u: User | u in Login
+fact SeatUnique {
+    all s1, s2: Seat | s1 != s2 implies s1.seatNumber != s2.seatNumber
 }
 
-fact UserChooseFilm {
-    all pf: PilihFilm | pf.chosen in User and pf.availableFilm in Film
+// Predicates
+pred VerifyLogin(l: Login, u: User) {
+    l.username = u.username and l.password = u.password
 }
 
-fact UserChooseLocation {
-    all pl: PilihLokasi | pl.chosen in User and pl.available in Location
+pred KursiAvailable(k: PilihKursi, s: Seat) {
+    s in k.availableSeats
 }
 
-fact UserChooseShowtime {
-    all pt: PilihJamTayang | pt.chosen in User and pt.availableShowtimes in Showtime
+pred JamTayangAvailable(j: PilihJamTayang, st: Showtime) {
+    st in j.availableShowtimes
 }
 
-fact UserChooseSeat {
-    all pk: PilihKursi | pk.chosen in User and pk.availableSeats in Seat
+// Assertions
+assert FilmSelectionValid {
+    all pf: PilihFilm, f: Film | f in pf.availableFilms
 }
 
-fact ProsesPembayaranFacts {
-    all pp: ProsesPembayaran | pp in User and pp.paymentDetails in String
+assert LokasiSelectionValid {
+    all pl: PilihLokasi, l: Location | l in pl.availableLocations
 }
 
-fact TicketFacts {
-    all t: Ticket | lone t
+assert PembayaranValid {
+    all pp: ProsesPembayaran, s: lone String | s = pp.paymentDetails
 }
 
-pred verifyLogin(username: String, password: String) {
-    some u: User | u.username = username and u.password = password
+assert KursiBookingValid {
+    all pk: PilihKursi, s: Seat | s in pk.availableSeats implies s.isOccupied = 0
 }
 
-pred main() {
-    some u: User, lf: Login, pf: PilihFilm, pl: PilihLokasi, pt: PilihJamTayang, pk: PilihKursi, pp: ProsesPembayaran |
-        u in lf and u in pf.chosen and u in pl.chosen and u in pt.chosen and u in pk.chosen and u in pp and
-        verifyLogin[lf.username, lf.password] and
-        pf.available in pl.available and pl.available in pt.available and pt.available in pk.available and
-        pk.available in pp and pp in pf.chosen.ticket
-}
+run {} for 5 but exactly 3 User, 5 Film, 3 Location, 5 Showtime, 20 Seat, 2 Login, 3 PilihFilm, 3 PilihLokasi, 3 PilihJamTayang, 3 PilihKursi, 3 ProsesPembayaran
 
-assert systemWorks {
-    all u: User | u in User implies some main()
-}
+check FilmSelectionValid for 5 but exactly 3 User, 5 Film, 3 Location, 5 Showtime, 20 Seat, 2 Login, 3 PilihFilm, 3 PilihLokasi, 3 PilihJamTayang, 3 PilihKursi, 3 ProsesPembayaran
 
-run systemWorks for 5
-check main for 5
+check LokasiSelectionValid for 5 but exactly 3 User, 5 Film, 3 Location, 5 Showtime, 20 Seat, 2 Login, 3 PilihFilm, 3 PilihLokasi, 3 PilihJamTayang, 3 PilihKursi, 3 ProsesPembayaran
 
+check PembayaranValid for 5 but exactly 3 User, 5 Film, 3 Location, 5 Showtime, 20 Seat, 2 Login, 3 PilihFilm, 3 PilihLokasi, 3 PilihJamTayang, 3 PilihKursi, 3 ProsesPembayaran
+
+check KursiBookingValid for 5 but exactly 3 User, 5 Film, 3 Location, 5 Showtime, 20 Seat, 2 Login, 3 PilihFilm, 3 PilihLokasi, 3 PilihJamTayang, 3 PilihKursi, 3 ProsesPembayaran
