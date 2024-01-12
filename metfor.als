@@ -1,117 +1,109 @@
-open util/integer
-open util/date
+open util/boolean
 
-sig User {
-  username: String,
-  password: String,
-  selectedFilm: lone Film,
-  selectedLocation: lone Location,
-  selectedShowtime: lone Showtime,
-  selectedSeat: lone Seat,
-  paymentProcess: one ProsesPembayaran,
-  ticket: lone Ticket
+sig String {}
+
+abstract sig User {
+    username: String,
+    password: String,
+    ticket: lone Ticket
 }
 
 sig Login {
-  username: String,
-  password: String
+    username: String,
+    password: String
 }
 
-sig PilihFilm {
-  availableFilm: set Film,
-  selectedFilm: lone Film
+abstract sig Pilih {
+    chosen: lone User,
+    available: lone Location
 }
 
-sig PilihLokasi {
-  availableLocations: set Location,
-  selectedLocation: lone Location
+sig PilihFilm extends Pilih {
+    availableFilm: lone Film
 }
 
-sig PilihJamTayang {
-  availableShowtimes: set Showtime,
-  selectedShowtime: lone Showtime
+sig PilihLokasi extends Pilih {
+    availableLocations: lone Location
 }
 
-sig PilihKursi {
-  availableSeats: set Seat,
-  selectedSeat: lone Seat
+sig PilihJamTayang extends Pilih {
+    availableShowtimes: lone Showtime
+}
+
+sig PilihKursi extends Pilih {
+    availableSeats: lone Seat
 }
 
 sig ProsesPembayaran {
-  paymentDetails: String
+    paymentDetails: String
 }
 
 sig Film {
-  title: String,
-  duration: Int,
-  genre: String
+    title: String,
+    duration: Int,
+    genre: String
 }
 
 sig Location {
-  name: String,
-  address: String
+    name: String,
+    address: String
 }
 
 sig Showtime {
-  time: DateTime
+    time: Int
 }
 
 sig Seat {
-  seatNumber: String,
-  isOccupied: Bool
+    seatNumber: String,
+    isOccupied: Bool
 }
 
 sig Ticket {}
 
--- Associations and Aggregations
-fact Associations {
-  all u: User |
-    u.selectedFilm in PilihFilm.selectedFilm and
-    u.selectedLocation in PilihLokasi.selectedLocation and
-    u.selectedShowtime in PilihJamTayang.selectedShowtime and
-    u.selectedSeat in PilihKursi.selectedSeat and
-    u.paymentProcess = ProsesPembayaran and
-    u.ticket in Ticket
+fact UserLogin {
+    all u: User | u in Login
 }
 
--- Constraints
-fact TicketConstraints {
-  all t: Ticket | some s: Seat | t in s
+fact UserChooseFilm {
+    all pf: PilihFilm | pf.chosen in User and pf.availableFilm in Film
 }
 
--- Sequence Diagram Constraints
-fact SequenceConstraints {
-  all u: User |
-    (u in Login.username and u in Login.password) =>
-      (some pf: PilihFilm | u.selectedFilm in pf.selectedFilm)
+fact UserChooseLocation {
+    all pl: PilihLokasi | pl.chosen in User and pl.available in Location
 }
 
--- Activity Constraints
-fact ActivityConstraints {
-  all u: User |
-    u.selectedFilm != none and u.selectedLocation != none and u.selectedSeat != none =>
-      (u.selectedFilm in PilihFilm.selectedFilm and
-      u.selectedLocation in PilihLokasi.selectedLocation and
-      u.selectedSeat in PilihKursi.selectedSeat)
+fact UserChooseShowtime {
+    all pt: PilihJamTayang | pt.chosen in User and pt.availableShowtimes in Showtime
 }
 
--- Predicates
-pred loginGagal(u: User, l: Login) {
-  (l.username - u.username) or (l.password - u.password)
+fact UserChooseSeat {
+    all pk: PilihKursi | pk.chosen in User and pk.availableSeats in Seat
 }
 
-pred kursiGagalBooking(u: User, pk: PilihKursi) {
-  some s: Seat | s.isOccupied = true and s not in pk.selectedSeat
+fact ProsesPembayaranFacts {
+    all pp: ProsesPembayaran | pp in User and pp.paymentDetails in String
 }
 
--- Assertions
-assert LoginGagalAssertion {
-  all u: User, l: Login | loginGagal[u, l] implies l not in u
+fact TicketFacts {
+    all t: Ticket | lone t
 }
 
-assert KursiGagalBookingAssertion {
-  all u: User, pk: PilihKursi | kursiGagalBooking[u, pk] implies pk.selectedSeat != u.selectedSeat
+pred verifyLogin(username: String, password: String) {
+    some u: User | u.username = username and u.password = password
 }
 
-run loginGagal for 5 User, 3 Login
-run kursiGagalBooking for 5 User, 5 PilihKursi
+pred main() {
+    some u: User, lf: Login, pf: PilihFilm, pl: PilihLokasi, pt: PilihJamTayang, pk: PilihKursi, pp: ProsesPembayaran |
+        u in lf and u in pf.chosen and u in pl.chosen and u in pt.chosen and u in pk.chosen and u in pp and
+        verifyLogin[lf.username, lf.password] and
+        pf.available in pl.available and pl.available in pt.available and pt.available in pk.available and
+        pk.available in pp and pp in pf.chosen.ticket
+}
+
+assert systemWorks {
+    all u: User | u in User implies some main()
+}
+
+run systemWorks for 5
+check main for 5
+
