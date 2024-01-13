@@ -1,7 +1,6 @@
 open util/ boolean
 module CinemaBookingSystem
 
-// Signatures
 abstract sig User {
     username: lone Username,
     password: lone Password
@@ -64,7 +63,6 @@ sig ProsesPembayaran {
     paymentDetails: lone String
 }
 
-// Facts
 fact UserUnique {
     all u1, u2: User | u1 != u2 implies u1.username != u2.username
 }
@@ -85,7 +83,6 @@ fact SeatUnique {
     all s1, s2: Seat | s1 != s2 implies s1.seatNumber != s2.seatNumber
 }
 
-// Predicates
 pred VerifyLogin(l: Login, u: User) {
     l.username = u.username and l.password = u.password
 }
@@ -98,7 +95,6 @@ pred JamTayangAvailable(j: PilihJamTayang, st: Showtime) {
     st in j.availableShowtimes
 }
 
-// Assertions
 assert FilmSelectionValid {
     all pf: PilihFilm, f: Film | f in pf.availableFilms
 }
